@@ -8,10 +8,10 @@ wheels/
 
 # Virtual environments
 .venv
-C:\Privat\Documents\rag-production-api-pgvector\.env
+.env
 
 # IDE
-C:\Privat\Documents\rag-production-api-pgvector\.vscode
+.vscode/
 .idea/
 
 # OS
@@ -19,4 +19,4 @@ C:\Privat\Documents\rag-production-api-pgvector\.vscode
 thumbs.db
 
 # docs
-C:\Privat\Documents\rag-production-api-pgvector\docs
+docs

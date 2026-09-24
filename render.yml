@@ -1,0 +1,52 @@
+# render.yaml - Infrastructure as Code for Render
+
+services:
+  - type: web
+    name: rag-production-api-langgraph-api-pgvector
+    runtime: python
+    region: frankfurt
+    plan: free
+
+    buildCommand: pip install uv && uv sync --frozen --no-dev --no-install-project
+
+    startCommand: .venv/bin/uvicorn src.app.main:app --host 0.0.0.0 --port $PORT
+
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.3"
+
+      - key: APP_ENV
+        value: production
+
+      - key: LOG_LEVEL
+        value: INFO
+
+      - key: RATE_LIMIT
+        value: "20/minute"
+
+      - key: CACHE_TTL_SECONDS
+        value: "300"
+
+      - key: MAX_RETRIES
+        value: "3"
+
+      - key: PRIMARY_MODEL
+        value: gemma4:cloud
+
+      - key: FALLBACK_MODEL
+        value: gemma4:cloud
+
+      - key: OLLAMA_API_KEY
+        sync: false
+
+      - key: LANGCHAIN_API_KEY
+        sync: false
+
+      - key: LANGCHAIN_TRACING_V2
+        value: "true"
+
+      - key: LANGCHAIN_PROJECT
+        value: rag-production-api-pgvector
+
+    healthCheckPath: /health
+    autoDeploy: true
