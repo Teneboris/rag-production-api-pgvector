@@ -1,0 +1,22 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+C:\Privat\Documents\rag-production-api-pgvector\.env
+
+# IDE
+C:\Privat\Documents\rag-production-api-pgvector\.vscode
+.idea/
+
+# OS
+.DS_Store
+thumbs.db
+
+# docs
+C:\Privat\Documents\rag-production-api-pgvector\docs
