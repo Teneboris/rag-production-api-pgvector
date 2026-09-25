@@ -11,6 +11,7 @@ import os
 class Settings(BaseSettings):
     
     # LLM Configuration
+    ollama_base_url: str = "http://localhost:11434"
     ollama_api_key: str | None = None
     model_provider: str = "ollama"
     primary_model: str = "gemma4:cloud"

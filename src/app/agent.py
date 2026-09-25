@@ -55,14 +55,29 @@ class ProductionAgent:
     def __init__(self):
         settings = get_settings()
 
+        ollama_kwargs = {
+            "base_url": settings.ollama_base_url,
+        }
+
+        if settings.ollama_api_key:
+            ollama_kwargs["client_kwargs"] = {
+                "headers": {
+                    "Authorization": (
+                        f"Bearer {settings.ollama_api_key}"
+                    ),
+                },
+            }
+
         self.primary_llm = ChatOllama(
             model=settings.primary_model,
             temperature=0,
+            **ollama_kwargs,
         )
 
         self.fallback_llm = ChatOllama(
             model=settings.fallback_model,
             temperature=0,
+            **ollama_kwargs,
         )
 
         self.max_retries = settings.max_retries
