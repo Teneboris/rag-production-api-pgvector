@@ -11,7 +11,7 @@ import os
 class Settings(BaseSettings):
     
     # LLM Configuration
-    ollama_api_key: str = ""
+    ollama_api_key: str | None = None
     model_provider: str = "ollama"
     primary_model: str = "gemma4:cloud"
     fallback_model: str = "gemma4:cloud"

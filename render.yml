@@ -30,6 +30,9 @@ services:
       - key: MAX_RETRIES
         value: "3"
 
+      - key: OLLAMA_BASE_URL
+        value: https://ollama.com
+
       - key: PRIMARY_MODEL
         value: gemma4:cloud
 
