@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     model_provider: str = "ollama"
     primary_model: str = "gemma4:cloud"
     fallback_model: str = "gemma4:cloud"
-    embeddings_model: str = "chroma/all-minilm-l6-v2-f32:latest"
+    embeddings_model: str = "sentence-transformers/all-MiniLM-L6-v2"
 
     # LangSmith
     langchain_tracing_v2: bool = True

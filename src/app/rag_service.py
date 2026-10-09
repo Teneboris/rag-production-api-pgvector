@@ -44,6 +44,7 @@ from langchain_core.documents import Document as LangChainDocument
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from llama_index.core import Document, VectorStoreIndex
 from llama_index.core.schema import MetadataMode, TextNode
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.core.vector_stores import (
     ExactMatchFilter,
     FilterCondition,
@@ -74,24 +75,17 @@ class RAGState(TypedDict, total=False):
     session_id: str | None
 
 
+@lru_cache(maxsize=1)
+def _get_embedding_model() -> HuggingFaceEmbedding:
+    embbeddings=settings.embeddings_model
+    return HuggingFaceEmbedding(
+        model_name=embbeddings,
+    )
+
 def configure_embeddings() -> int:
     """Configure the LlamaIndex embedding model and return its vector size."""
-    
-    client_kwargs = {}
-    
-    if settings.ollama_api_key:
-        client_kwargs["headers"] = {
-            "Authorization": f"Bearer {settings.ollama_api_key}",
-    }
-    
-    embedding_model = OllamaEmbedding(
-        model_name=settings.embeddings_model,
-        base_url=settings.ollama_base_url,
-        client_kwargs=client_kwargs,
-    )
+    embedding_model = _get_embedding_model()
     LlamaSettings.embed_model = embedding_model
-
-    # Determine the dimension from the actual model rather than guessing.
     return len(embedding_model.get_text_embedding("dimension check"))
 
 def _ollama_kwargs() -> dict:
