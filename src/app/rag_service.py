@@ -94,6 +94,26 @@ def configure_embeddings() -> int:
     # Determine the dimension from the actual model rather than guessing.
     return len(embedding_model.get_text_embedding("dimension check"))
 
+def _ollama_kwargs() -> dict:
+    
+    kwargs = {"base_url": settings.ollama_base_url}
+    if settings.ollama_api_key:
+        kwargs["client_kwargs"] = {
+            "headers": {
+                "Authorization": f"Bearer {settings.ollama_api_key}",
+            },
+        }
+    return kwargs
+
+def get_chat_llm(**overrides):
+    params = {
+        "model": settings.primary_model,
+        "temperature": 0,
+        **_ollama_kwargs(),
+    }
+    params.update(overrides)
+    return ChatOllama(**params)
+
 # =====================================================
 # Storing
 # ====================================================
@@ -462,10 +482,7 @@ Document:
 # Grade each document and calculate average
 def grade_document(state: RAGState) -> dict:
     
-    llm = ChatOllama(
-        model=settings.primary_model,
-        base_url=settings.ollama_base_url,
-        temperature=0,
+    llm = get_chat_llm(
         format="json"
     ).with_structured_output(RelevanceGrade, include_raw=True)
     
@@ -529,11 +546,7 @@ def rewrite_query(state: RAGState) -> dict:
     query = state.get("rewritten_query")
     retry_count = state.get("retry_count", 0)
 
-    llm = ChatOllama(
-        model=settings.primary_model,
-        base_url=settings.ollama_base_url,
-        temperature=0,
-    )
+    llm = get_chat_llm()
 
     rewrite_prompt = ChatPromptTemplate(
         [
@@ -575,11 +588,7 @@ def generate_answer(state: RAGState) -> dict:
     query = state["query"]
     context = state["relevant_documents"]
     
-    llm = ChatOllama(
-        model=settings.primary_model,
-        base_url=settings.ollama_base_url,
-        temperature=0,
-    )
+    llm = get_chat_llm()
 
     context = format_context(context)
     generate_prompt = ChatPromptTemplate.from_messages(
