@@ -1,0 +1,66 @@
+# Prüfe zuerst, ob die Dateien im Container tatsächlich unter /app/docs vorhanden sind:
+docker compose exec agent-api /app/.venv/bin/python -c "from pathlib import Path; p=Path('/app/docs'); print('docs exists:', p.is_dir()); print('files:', [str(x) for x in p.rglob('*') if x.is_file()])"
+
+# Dann prüfe, ob LlamaIndex sie laden kann
+docker compose exec agent-api /app/.venv/bin/python -c "from llama_index.core import SimpleDirectoryReader; docs=SimpleDirectoryReader('/app/docs').load_data(); print('documents loaded:', len(docs)); print('text lengths:', [len(d.text) for d in docs])"
+
+# docker build
+docker compose up --build -d
+
+# docker log
+docker compose logs -f agent-api
+
+# run test
+uv run python -m pytest .\src\tests\test_api.py -vv
+
+
+# Fehler"INFO:     Uvicorn running on [http://0.0.0.0:8000⁠](http://0.0.0.0:8000/) (Press CTRL+C to quit)
+
+INFO:     172.19.0.1:47172 - "POST /rag/chat HTTP/1.1" 422 Unprocessable Content
+
+{"timestamp": "2026-10-07T14:07:43.331433+00:00", "level": "ERROR", "message": "RAG graph invocation failed", "module": "main", "function": "rag\_chat", "error": "Failed to parse RelevanceGrade from completion {\\"relevance\\": \\"not\_relevant\\", \\"reasoning\\": \\"The document consists of random characters and corrupted data (gibberish) and contains no meaningful information to answer the query.\\"}. Got: 2 validation errors for RelevanceGrade\nrelevant\n  Field required [type=missing, input\_value={'relevance': 'not\_releva...n to answer the query.'}, input\_type=dict]\n    For further information visit [https://errors.pydantic.dev/2.13/v/missing\nllm\_score\n⁠](https://errors.pydantic.dev/2.13/v/missing\nllm_score\n⁠)  Field required [type=missing, input\_value={'relevance': 'not\_releva...n to answer the query.'}, input\_type=dict]\n    For further information visit [https://errors.pydantic.dev/2.13/v/missing\nFor⁠](https://errors.pydantic.dev/2.13/v/missing\nFor⁠) troubleshooting, visit: [https://docs.langchain.com/oss/python/langchain/errors/OUTPUT\_PARSING\_FAILURE⁠](https://docs.langchain.com/oss/python/langchain/errors/OUTPUT_PARSING_FAILURE⁠) "}
+
+INFO:     172.19.0.1:39530 - "POST /rag/chat HTTP/1.1" 500 Internal Server Error"
+ --> Fix "
+    - Ergebnis: pypdf ist da, aber file_extractor ist leer ({}). Darum wird die PDF als rohe Bytes gelesen.
+
+        Der Grund: SimpleDirectoryReader lädt die Extractors erst lazy beim load_data(), nicht im Konstruktor. Der leere Ausdruck ist also normal und kein Beweis.
+
+        Besserer Test (bitte du ausführen)
+    - ModuleNotFoundError → genau das ist die Ursache. Der PDF-Reader lebt im Paket llama-index-readers-file,
+        das bei dir fehlt. llama-index als Meta-Paket zieht es normalerweise mit, aber dein Build hat es nicht.
+    Lösung: uv lock
+            docker compose build agent-api
+            docker compose up -d
+
+    - docker compose exec agent-api /app/.venv/bin/python -c "from llama_index.core import SimpleDirectoryReader; 
+        docs=SimpleDirectoryReader(input_files=['/app/docs/Anschreiben VIDACTA Desmond.pdf']).load_data(); print(len(docs));
+        print(repr(docs[0].text[:300]))"
+ "
+
+# Dokument auflisten
+- docker compose exec agent-api /app/.venv/bin/python -c "from src.app.rag_service import retrieve_documents; 
+r=retrieve_documents('Organisatorische Rahmenbedingungen AKL', top_k=10); print(len(r)); [print(d.score, d.node.metadata.get('file_name'), d.node.metadata.get('scope')) for d in r]"
+
+# check the app version
+- curl.exe http://localhost:8000/health
+
+# Nach einem Änderung einfach restarten um die Modell rag-gemma zu behalten:
+- docker compose restart agent-api
+
+# ingest my Dokument
+- docker compose exec agent-api /app/.venv/bin/python -c "from src.app.rag_service import ingest_documents; print(ingest_documents())"
+
+# Prüf direkt, ob das temporäre Dokument mit der session_id überhaupt retrievebar ist
+- docker compose exec agent-api /app/.venv/bin/python -c "from src.app.rag_service import retrieve_documents; r=retrieve_documents('genossenschaftliche Beratung', top_k=10, session_id='Bovr8BDWDnGQfRF4xmQ9GqRm1jYEkXb61SDD6hS1qiE'); print(len(r)); [print(round(d.score,3), d.node.metadata.get('scope'), d.node.metadata.get('session_id'), d.node.metadata.get('file_name')) for d in r]"
+
+
+
+
+
+
+
+
+
+
+

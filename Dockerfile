@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 WORKDIR /app
 
@@ -19,20 +19,27 @@ USER appuser
 # install dependencies without building the local project
 RUN uv sync --frozen --no-dev --no-install-project
 
+# fix NLTK hardlink issue (st_nlink=2) by recreating the cache with fresh inodes
+RUN cp -r /app/.venv/lib/python3.14/site-packages/llama_index/core/_static/nltk_cache /tmp/nltk_cache \
+    && rm -rf /app/.venv/lib/python3.14/site-packages/llama_index/core/_static/nltk_cache \
+    && mv /tmp/nltk_cache /app/.venv/lib/python3.14/site-packages/llama_index/core/_static/nltk_cache
+
 # Copy application code
 
 COPY --chown=appuser:appuser src/ src/
+
+COPY --chown=appuser:appuser docs/ docs/
 
 # Expose port
 EXPOSE 8000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
-    CMD curl -f http://127.0.0.1:8000/health || exit 1
+    CMD ["/app/.venv/bin/python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
 
 
 # Run with uvicorn
-CMD ["/app/.venv/bin/uvicorn", "src.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["/app/.venv/bin/uvicorn", "src.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
 
 

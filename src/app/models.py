@@ -7,7 +7,7 @@ Pydantic models for input validation and response structure.
 from pydantic import BaseModel, Field
 from datetime import datetime, timezone
 
-class ChatRequest(BaseModel):
+class MessageRequest(BaseModel):
     """Incoming chat request."""
     message: str = Field(
         ..., # Must be provided and must be a string (Without ..., a default could make the field optional)
@@ -15,10 +15,10 @@ class ChatRequest(BaseModel):
         max_length=10000, # Must containt no more than 10,000 characters
         description="the user´s message to the agent",
     )
-    thread_id: str = Field(
-        default="default",
-        description="Conversation thread ID"
-    )
+    thread_id: str | None = None
+
+class ChatRequest(MessageRequest):
+    """Request for general chat."""
 
 class ChatResponse(BaseModel):
     """Chat response returned to the client."""
@@ -33,7 +33,7 @@ class HealthResponse(BaseModel):
     """Health check response"""
     status: str = "healthy"
     environment: str
-    version: str = "1.0.0"
+    version: str = "1.0.1"
     checks: dict = {}
     
 class MetricsResponse(BaseModel):
@@ -46,15 +46,50 @@ class MetricsResponse(BaseModel):
     total_input_tokens: int
     total_output_tokens: int
 
+class RAGChatRequest(MessageRequest):
+    "RAG Chat request"
+    session_id: str | None = None
+
+class DocumentRelevance(BaseModel):
+    node_id: str
+    source: str = "unknown"
+    retrieval_score: float | None = None
+    llm_score: float = Field(ge=0.0, le=1.0)
+    relevant: bool
+    reasoning: str
+
+
+class RelevanceResponse(ChatResponse):
+    """Response from document-grounded chat."""
+    query: str
+    relevant_documents: list[DocumentRelevance]
+    document_grades: list[DocumentRelevance]
+    relevance_score: float | None = Field(default=None, ge=0.0, le=1.0)
+    threshold: float = Field(ge=0.0, le=1.0)
+
 class ErrorResponse(BaseModel):
     """Standart error response."""
     error: str
-    detail: str | None = None
+    detail: str="default"
     request_id: str | None = None
 
+class UploadSessionResponse(BaseModel):
+    session_id: str
+    filename:str
+    chunks_created: int
+    expires_at: datetime
 
+# ============================================================
+# OpenAI-compatible models (for Open WebUI etc.)
+# ============================================================
 
+class OpenAIChatMessage(BaseModel):
+    role: str
+    content: str
 
-
+class OpenAIChatRequest(BaseModel):
+    model: str | None = None
+    messages: list[OpenAIChatMessage]
+    stream: bool = False
 
 
