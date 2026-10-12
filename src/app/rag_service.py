@@ -19,6 +19,7 @@ Building a RAG pipeline using LlamaIndex
 - Storing
 """
 
+from llama_index.core.base.embeddings.base import BaseEmbedding
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_ollama import ChatOllama
 from langsmith import traceable
@@ -44,7 +45,6 @@ from langchain_core.documents import Document as LangChainDocument
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from llama_index.core import Document, VectorStoreIndex
 from llama_index.core.schema import MetadataMode, TextNode
-from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.core.vector_stores import (
     ExactMatchFilter,
     FilterCondition,
@@ -76,11 +76,27 @@ class RAGState(TypedDict, total=False):
 
 
 @lru_cache(maxsize=1)
-def _get_embedding_model() -> HuggingFaceEmbedding:
-    embbeddings=settings.embeddings_model
-    return HuggingFaceEmbedding(
-        model_name=embbeddings,
-    )
+def _get_embedding_model():
+    if settings.embeddings_provider == "bedrock":
+        from llama_index.embeddings.bedrock import BedrockEmbedding
+        return BedrockEmbedding(
+            model_name=settings.embeddings_model,   # amazon.titan-embed-text-v2:0
+            region_name=settings.aws_region,
+            aws_access_key_id=settings.aws_access_key_id,
+            aws_secret_access_key=settings.aws_secret_access_key,
+        )
+
+    # Fallback: Ollama
+    api_key = settings.resolved_embeddings_api_key
+    kwargs = {"model_name": settings.embeddings_model,
+              "base_url": settings.resolved_embeddings_base_url}
+    if api_key:
+
+        kwargs["client_kwargs"] = {
+            "headers": {"Authorization": f"Bearer {api_key}"},
+        }
+
+    return OllamaEmbedding(**kwargs)
 
 def configure_embeddings() -> int:
     """Configure the LlamaIndex embedding model and return its vector size."""
@@ -355,7 +371,7 @@ def load_index() -> VectorStoreIndex:
 
 def retrieve_documents(
     query: str,
-    top_k: int = 40,
+    top_k: int = 10,
 ) -> list[NodeWithScore]:
     if not query.strip():
         return []
@@ -604,7 +620,7 @@ HOW TO STRUCTURE YOUR ANSWER:
 - Under each heading, use bullet points for individual facts.
 - Keep each bullet concise and focused on one fact.
 - When a document covers multiple areas, group related points together under their own heading.
-- End with a brief note on the source(s), e.g. "Quelle: <document name>".
+- Cite sources only once at the end under a "Quelle:  <document name>" line. Never repeat the source inline after each sentence or bullet.
 
 Be thorough: cover all relevant information from the context, not just the first few points.""",
             ),
@@ -737,7 +753,7 @@ class RAGService:
         message: str,
         session_id: str | None = None,
         ) -> dict:
-        threshold = 0.5
+        threshold = 0.3
 
         result = self.graph.invoke(
             {

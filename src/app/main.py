@@ -147,7 +147,7 @@ app = FastAPI(
         "A production-ready chat and RAG system API with security, "
         "caching, and observability."
     ),
-    version="1.0.1",
+    version="0.1.1",
     lifespan=lifespan,
 )
 

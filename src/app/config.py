@@ -13,10 +13,26 @@ class Settings(BaseSettings):
     # LLM Configuration
     ollama_base_url: str = "http://localhost:11434"
     ollama_api_key: str | None = None
-    model_provider: str = "ollama"
+    embeddings_provider : str = "ollama"
     primary_model: str = "gemma4:cloud"
     fallback_model: str = "gemma4:cloud"
-    embeddings_model: str = "sentence-transformers/all-MiniLM-L6-v2"
+
+    # Embeddings
+    embeddings_model: str = "chroma/all-minilm-l6-v2-f32:latest"
+    embeddings_base_url: str | None = None
+    embeddings_api_key: str | None = None
+
+    aws_region: str = "eu-central-1"
+    aws_access_key_id: str | None = None
+    aws_secret_access_key: str | None = None
+
+    @property
+    def resolved_embeddings_base_url(self) -> str:
+        return self.embeddings_base_url or self.ollama_base_url
+
+    @property
+    def resolved_embeddings_api_key(self) -> str | None:
+        return self.embeddings_api_key or self.ollama_api_key
 
     # LangSmith
     langchain_tracing_v2: bool = True

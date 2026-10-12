@@ -54,6 +54,9 @@ r=retrieve_documents('Organisatorische Rahmenbedingungen AKL', top_k=10); print(
 # Prüf direkt, ob das temporäre Dokument mit der session_id überhaupt retrievebar ist
 - docker compose exec agent-api /app/.venv/bin/python -c "from src.app.rag_service import retrieve_documents; r=retrieve_documents('genossenschaftliche Beratung', top_k=10, session_id='Bovr8BDWDnGQfRF4xmQ9GqRm1jYEkXb61SDD6hS1qiE'); print(len(r)); [print(round(d.score,3), d.node.metadata.get('scope'), d.node.metadata.get('session_id'), d.node.metadata.get('file_name')) for d in r]"
 
+# embedding dimension
+- .venv\Scripts\python -c "from src.app.rag_service import configure_embeddings; print(configure_embeddings())"
+
 
 
 
