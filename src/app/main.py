@@ -683,7 +683,7 @@ async def list_models():
         "object": "list",
         "data": [
             {
-                "id": "rag-gemma",
+                "id": "rag-bedrock",
                 "object": "model",
                 "created": int(time.time()),
                 "owned_by": "rag-production",

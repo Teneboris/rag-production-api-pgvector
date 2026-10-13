@@ -56,6 +56,8 @@ r=retrieve_documents('Organisatorische Rahmenbedingungen AKL', top_k=10); print(
 
 # embedding dimension
 - .venv\Scripts\python -c "from src.app.rag_service import configure_embeddings; print(configure_embeddings())"
+# Testen erreichbarkeit openwebui
+docker exec openwebui curl -s http://rag-production-api-pgvector-agent-api-1:8000/v1/models
 
 
 

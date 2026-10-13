@@ -48,7 +48,7 @@ class MetricsResponse(BaseModel):
 
 class RAGChatRequest(MessageRequest):
     "RAG Chat request"
-    session_id: str | None = None
+
 
 class DocumentRelevance(BaseModel):
     node_id: str

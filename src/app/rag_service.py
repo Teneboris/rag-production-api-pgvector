@@ -753,7 +753,7 @@ class RAGService:
         message: str,
         session_id: str | None = None,
         ) -> dict:
-        threshold = 0.3
+        threshold = 0.5
 
         result = self.graph.invoke(
             {
