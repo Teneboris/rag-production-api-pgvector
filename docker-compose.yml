@@ -20,4 +20,5 @@ services:
     volumes:
       - ./src:/app/src
       - ./docs:/app/docs
+      - ./docs:/data/pdfs:ro
     restart: unless-stopped

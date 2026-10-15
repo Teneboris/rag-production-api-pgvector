@@ -33,7 +33,7 @@ class HealthResponse(BaseModel):
     """Health check response"""
     status: str = "healthy"
     environment: str
-    version: str = "0.1.1"
+    version: str = "0.2.0"
     checks: dict = {}
     
 class MetricsResponse(BaseModel):

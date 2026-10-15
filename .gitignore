@@ -16,3 +16,6 @@ venv/
 
 # Docs (local only)
 docs/*.pdf
+docs/.ingest_progress.json
+.ingest_progress.json
+

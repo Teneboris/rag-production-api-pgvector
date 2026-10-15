@@ -14,6 +14,7 @@ wire together:
 
 from datetime import datetime, timedelta, timezone
 import time
+import json
 import asyncio
 import secrets
 from pathlib import Path
@@ -25,7 +26,7 @@ from fastapi import (
     UploadFile,
     File
 )
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -147,7 +148,7 @@ app = FastAPI(
         "A production-ready chat and RAG system API with security, "
         "caching, and observability."
     ),
-    version="0.1.1",
+    version="0.2.0",
     lifespan=lifespan,
 )
 
@@ -676,6 +677,101 @@ async def chat(
 # OpenAI-compatible endpoints (Open WebUI integration)
 # ============================================================
 
+async def _stream_rag_completion(cleaned_message: str):
+    """
+    Produce an OpenAI-compatible Server-Sent-Event (SSE) stream for Open WebUI.
+
+    Emits:
+      - `reasoning_content` deltas (shown as an expandable "Thinking" block
+        in Open WebUI: "Searching...", "Combining answers...", etc.)
+      - normal content deltas carrying the final answer
+      - the terminating `[DONE]` marker
+
+    The synchronous RAG generator runs in a worker thread so it does not
+    block the event loop.
+    """
+    completion_id = f"chatcmpl-{secrets.token_hex(12)}"
+    created = int(time.time())
+    model_name = settings.primary_model
+
+    def _chunk(delta: dict, finish_reason=None) -> str:
+        payload = {
+            "id": completion_id,
+            "object": "chat.completion.chunk",
+            "created": created,
+            "model": model_name,
+            "choices": [
+                {
+                    "index": 0,
+                    "delta": delta,
+                    "finish_reason": finish_reason,
+                }
+            ],
+        }
+        return f"data: {json.dumps(payload)}\n\n"
+
+    def _status_event(message: str, done: bool) -> str:
+        # Open WebUI renders reasoning_content as an expandable "Thinking" block.
+        return _chunk({"reasoning_content": message + "\n"})
+
+    # Bridge the sync generator into async land via a queue + worker thread.
+    queue: asyncio.Queue = asyncio.Queue()
+    loop = asyncio.get_running_loop()
+    _SENTINEL = object()
+
+    def _produce():
+        try:
+            for event in rag_agent.stream(cleaned_message):
+                loop.call_soon_threadsafe(queue.put_nowait, event)
+        except Exception as exc:  # surface errors to the stream consumer
+            loop.call_soon_threadsafe(
+                queue.put_nowait,
+                {"type": "error", "message": str(exc)},
+            )
+        finally:
+            loop.call_soon_threadsafe(queue.put_nowait, _SENTINEL)
+
+    worker = asyncio.create_task(asyncio.to_thread(_produce))
+
+    final_answer = ""
+
+    try:
+        # First role chunk, as OpenAI clients expect.
+        yield _chunk({"role": "assistant"})
+
+        while True:
+            event = await queue.get()
+            if event is _SENTINEL:
+                break
+
+            etype = event.get("type")
+
+            if etype == "status":
+                yield _status_event(event["message"], event["done"])
+
+            elif etype == "final":
+                final_answer = event.get("response", "")
+
+            elif etype == "error":
+                logger.error(
+                    "RAG stream failed",
+                    extra={"extra_data": {"error": event.get("message")}},
+                )
+                final_answer = (
+                    "An error occurred while processing your request."
+                )
+
+        # Validate output, then stream it as the actual answer content.
+        validated_answer, _ = security.check_output(final_answer)
+
+        yield _chunk({"content": validated_answer})
+        yield _chunk({}, finish_reason="stop")
+        yield "data: [DONE]\n\n"
+    finally:
+        with suppress(Exception):
+            await worker
+
+
 @app.get("/v1/models")
 async def list_models():
     """Minimal OpenAI-compatible model list for Open WebUI."""
@@ -727,6 +823,18 @@ async def openai_chat_completions(
             raise HTTPException(
                 status_code=400,
                 detail="Your message was blocked by our security filters.",
+            )
+
+        # Streaming path: send live status steps + the answer as SSE.
+        if body.stream:
+            return StreamingResponse(
+                _stream_rag_completion(cleaned_message),
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive",
+                    "X-Accel-Buffering": "no",
+                },
             )
 
         # Step 2: RAG aufrufen

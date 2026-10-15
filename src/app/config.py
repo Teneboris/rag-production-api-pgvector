@@ -53,6 +53,18 @@ class Settings(BaseSettings):
     supabase_publishable_key: str | None = None
     supabase_secret_key: str | None = None
     supabase_jwks_url: str | None = None
+
+    # Ingest
+    ingest_dir:str | None=None
+    ingest_batch_size: int = 25
+    # Schreibbares Verzeichnis fuer die Resume-Datei (ingest_dir kann read-only sein).
+    ingest_progress_dir: str = "ingest_progress_dir"
+
+    # Embedding-Durchsatz (v.a. Bedrock Titan: einzelne Requests, daher
+    # bringt Parallelitaet mehr als Batch-Groesse). num_workers hoch =
+    # mehr Durchsatz, aber Risiko von Throttling.
+    embed_batch_size: int = 16
+    embed_num_workers: int = 8
     
     model_config = SettingsConfigDict(
         env_file=".env",
