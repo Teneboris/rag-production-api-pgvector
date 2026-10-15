@@ -319,22 +319,11 @@ async def rag_chat(
                 ),
             )
             
-        if body.session_id:
-            active = await asyncio.to_thread(
-                upload_sessions.is_upload_session_active,
-                body.session_id,
-            )
-                    
-            if not active:
-                raise HTTPException(
-                    status_code=410,
-                    detail="Upload-Session ist abgelaufen oder unbekannt."
-                )
     # ----------------------------------------------------
     # Step 2: RAG-specific cache lookup
     # ----------------------------------------------------
 
-        rag_cache_key = f"rag:{body.session_id or 'shared'}:{cleaned_message}"
+        rag_cache_key = f"rag:{'shared'}:{cleaned_message}"
         
         cached_response = cache.get(
             rag_cache_key
@@ -378,7 +367,6 @@ async def rag_chat(
             rag_result = await asyncio.to_thread(
                 rag_agent.invoke,
                 cleaned_message,
-                body.session_id,
             )
         except Exception as exc:
             logger.exception(
