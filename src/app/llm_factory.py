@@ -1,6 +1,6 @@
 """Chat-LLM factory shared by the RAG graph and the plain agent.
 
-Provider is selected via MODEL_PROVIDER ("ollama" | "bedrock").
+Provider is selected via MODEL_PROVIDER ("ollama" | "bedrock")
 """
 
 from src.app.config import get_settings

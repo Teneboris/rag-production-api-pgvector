@@ -707,7 +707,7 @@ async def _stream_rag_completion(cleaned_message: str):
     loop = asyncio.get_running_loop()
     _SENTINEL = object()
 
-    def _produce():
+    def _produce(): 
         try:
             for event in rag_agent.stream(cleaned_message):
                 loop.call_soon_threadsafe(queue.put_nowait, event)

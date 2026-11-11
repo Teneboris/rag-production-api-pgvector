@@ -4,7 +4,7 @@ from typing_extensions import TypedDict, Annotated
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
 
-from langchain_ollama import ChatOllama
+from src.app.llm_factory import build_chat_llm
 from langchain_core.messages import (
     HumanMessage,
     AIMessage,
@@ -55,30 +55,8 @@ class ProductionAgent:
     def __init__(self):
         settings = get_settings()
 
-        ollama_kwargs = {
-            "base_url": settings.ollama_base_url,
-        }
-
-        if settings.ollama_api_key:
-            ollama_kwargs["client_kwargs"] = {
-                "headers": {
-                    "Authorization": (
-                        f"Bearer {settings.ollama_api_key}"
-                    ),
-                },
-            }
-
-        self.primary_llm = ChatOllama(
-            model=settings.primary_model,
-            temperature=0,
-            **ollama_kwargs,
-        )
-
-        self.fallback_llm = ChatOllama(
-            model=settings.fallback_model,
-            temperature=0,
-            **ollama_kwargs,
-        )
+        self.primary_llm = build_chat_llm(settings.primary_model)
+        self.fallback_llm = build_chat_llm(settings.fallback_model)
 
         self.max_retries = settings.max_retries
 

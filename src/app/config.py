@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     # LLM Configuration
     ollama_base_url: str = "http://localhost:11434"
     ollama_api_key: str | None = None
+    # Chat provider: "ollama" | "bedrock"
+    model_provider: str = "ollama"
     embeddings_provider : str = "ollama"
     primary_model: str = "gemma4:cloud"
     fallback_model: str = "gemma4:cloud"

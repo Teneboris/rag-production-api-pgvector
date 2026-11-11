@@ -21,7 +21,7 @@ Building a RAG pipeline using LlamaIndex
 
 from llama_index.core.base.embeddings.base import BaseEmbedding
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_ollama import ChatOllama
+from src.app.llm_factory import build_chat_llm
 from langsmith import traceable
 from pydantic import BaseModel, Field
 from functools import lru_cache
@@ -107,25 +107,9 @@ def configure_embeddings() -> int:
     LlamaSettings.embed_model = embedding_model
     return len(embedding_model.get_text_embedding("dimension check"))
 
-def _ollama_kwargs() -> dict:
-    
-    kwargs = {"base_url": settings.ollama_base_url}
-    if settings.ollama_api_key:
-        kwargs["client_kwargs"] = {
-            "headers": {
-                "Authorization": f"Bearer {settings.ollama_api_key}",
-            },
-        }
-    return kwargs
-
 def get_chat_llm(**overrides):
-    params = {
-        "model": settings.primary_model,
-        "temperature": 0,
-        **_ollama_kwargs(),
-    }
-    params.update(overrides)
-    return ChatOllama(**params)
+    """Chat model for the configured MODEL_PROVIDER (ollama | bedrock)."""
+    return build_chat_llm(**overrides)
 
 # =====================================================
 # Storing

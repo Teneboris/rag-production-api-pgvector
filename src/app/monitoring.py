@@ -21,7 +21,11 @@ class JSONFormatter(logging.Formatter):
         if hasattr(record, "extra_data"):
             log_obj.update(record.extra_data)
 
-        return json.dumps(log_obj)
+        # Include the traceback for logger.exception(...) / exc_info=True
+        if record.exc_info:
+            log_obj["exception"] = self.formatException(record.exc_info)
+
+        return json.dumps(log_obj, default=str)
 
 
 def get_logger(name: str = "production-api") -> logging.Logger:
